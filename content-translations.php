@@ -1,14 +1,16 @@
 <?php
 /*
- * Plugin Name: WP Content Translations
+ * Plugin Name: Content Translations
  * Description: Adds structured translations for posts/pages with GraphQL support.
  * Version: 1.0.0
  * Author: Osman Calisir
+ * License: GPLv2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  */
 
 if (!defined('ABSPATH')) exit;
 
-class WP_Content_Translations {
+class Content_Translations {
     private $languages;
     private $current_lang;
 
@@ -58,7 +60,7 @@ class WP_Content_Translations {
         foreach (['post', 'page'] as $type) {
             add_meta_box(
                 'wctp_translations',
-                __('Translations', 'wp-content-translations'),
+                __('Translations', 'content-translations'),
                 [$this, 'render_translation_metabox'],
                 $type,
                 'normal',
@@ -108,14 +110,18 @@ class WP_Content_Translations {
     }
 
     public function save_translations($post_id, $post) {
-        if (!isset($_POST['wctp_nonce']) || !wp_verify_nonce($_POST['wctp_nonce'], 'wctp_save_translations')) return;
+        $nonce = isset($_POST['wctp_nonce']) 
+            ? sanitize_text_field(wp_unslash($_POST['wctp_nonce'])) 
+            : '';
+        
+        if (!wp_verify_nonce($nonce, 'wctp_save_translations')) return;
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
         if (!current_user_can('edit_post', $post_id)) return;
-
-        $translations = isset($_POST['wctp_trans']) ? 
-            array_map('wp_kses_post', $_POST['wctp_trans']) : 
-            [];
-
+    
+        $translations = isset($_POST['wctp_trans']) 
+            ? array_map('wp_kses_post', wp_unslash($_POST['wctp_trans'])) 
+            : [];
+    
         update_post_meta($post_id, '_wctp_translations', $translations);
     }
 
@@ -153,35 +159,30 @@ class WP_Content_Translations {
 
     // === GraphQL Integration === //
     public function register_graphql_support() {
-        try {
-            // Register ContentFormatEnum first
-            $this->register_content_format_enum();
-            
-            // Register TranslationContent type
-            $this->register_translation_content_type();
-            
-            // Register Translations type
-            $this->register_translations_type();
-            
-            // Add translations field to post types
-            $this->register_translations_field();
-
-        } catch (\Exception $e) {
-            error_log('WP Content Translations Schema Error: ' . $e->getMessage());
-        }
+        // Register ContentFormatEnum first
+        $this->register_content_format_enum();
+        
+        // Register TranslationContent type
+        $this->register_translation_content_type();
+        
+        // Register Translations type
+        $this->register_translations_type();
+        
+        // Add translations field to post types
+        $this->register_translations_field();
     }
 
     private function register_content_format_enum() {
         register_graphql_enum_type('WCTP_ContentFormat', [
-            'description' => __('Content output format', 'wp-content-translations'),
+            'description' => __('Content output format', 'content-translations'),
             'values' => [
                 'RAW' => [
                     'value' => 'raw',
-                    'description' => __('Raw unformatted content', 'wp-content-translations')
+                    'description' => __('Raw unformatted content', 'content-translations')
                 ],
                 'RENDERED' => [
                     'value' => 'rendered',
-                    'description' => __('Content formatted for display', 'wp-content-translations')
+                    'description' => __('Content formatted for display', 'content-translations')
                 ]
             ]
         ]);
@@ -189,11 +190,11 @@ class WP_Content_Translations {
 
     private function register_translation_content_type() {
         register_graphql_object_type('WCTP_TranslationContent', [
-            'description' => __('Translated content for a language', 'wp-content-translations'),
+            'description' => __('Translated content for a language', 'content-translations'),
             'fields' => [
                 'content' => [
                     'type' => 'String',
-                    'description' => __('Translated content in requested format', 'wp-content-translations'),
+                    'description' => __('Translated content in requested format', 'content-translations'),
                     'args' => [
                         'format' => [
                             'type' => 'WCTP_ContentFormat',
@@ -220,7 +221,8 @@ class WP_Content_Translations {
             if ($code === 'en') continue;
             $fields[$code] = [
                 'type' => 'WCTP_TranslationContent',
-                'description' => sprintf(__('%s translation', 'wp-content-translations'), $label)
+                /* translators: %s: Language name */
+                'description' => sprintf(__('%s translation', 'content-translations'), $label)
             ];
         }
 
@@ -229,7 +231,7 @@ class WP_Content_Translations {
         }
 
         register_graphql_object_type('WCTP_Translations', [
-            'description' => __('Content translations keyed by language code', 'wp-content-translations'),
+            'description' => __('Content translations keyed by language code', 'content-translations'),
             'fields' => $fields
         ]);
     }
@@ -238,7 +240,7 @@ class WP_Content_Translations {
         foreach (['Post', 'Page'] as $type) {
             register_graphql_field($type, 'translations', [
                 'type' => 'WCTP_Translations',
-                'description' => __('Available translations for this content', 'wp-content-translations'),
+                'description' => __('Available translations for this content', 'content-translations'),
                 'resolve' => function($post) {
                     $translations = get_post_meta($post->databaseId, '_wctp_translations', true) ?: [];
                     $output = [];
@@ -265,4 +267,4 @@ class WP_Content_Translations {
     }
 }
 
-new WP_Content_Translations();
+new Content_Translations();
