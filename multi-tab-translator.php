@@ -181,35 +181,33 @@ class MultiTab_Translator {
             ],
           ] );
 
-        $all_codes = array_merge( array_keys( $this->languages ), ['en'] );
-        register_graphql_object_type( 'Translations', [
-            'fields' => array_reduce(
-                $all_codes,
-                function( $fields, $code ) {
-                    $fields[ $code ] = [ 'type' => 'TranslatedContent' ];
-                    return $fields;
-                },
-                []
-            ),
-        ] );
+          $all_codes = array_keys( $this->languages );
+          register_graphql_object_type( 'Translations', [
+              'fields' => array_reduce(
+                  $all_codes,
+                  function( $fields, $code ) {
+                      $fields[ $code ] = [ 'type' => 'TranslatedContent' ];
+                      return $fields;
+                  },
+                  []
+              ),
+          ]);
 
         foreach ( [ 'Post', 'Page' ] as $type ) {
             register_graphql_field( $type, 'translations', [
                 'type'    => 'Translations',
                 'resolve' => function( $post ) {
                     $meta = get_post_meta( $post->ID, self::META_KEY, true ) ?: [];
-                    $meta['en'] = $post->post_content;
                     $out = [];
-                    foreach ( (new MultiTab_Translator())->languages + ['en' => 'English'] as $lang => $_) {
-                        $raw = $meta[ $lang ] ?? '';
-                        $out[ $lang ] = [ 
-                            'raw' => $raw,
+                    foreach ( $this->languages as $lang => $name ) {
+                        $out[ $lang ] = [
+                            'raw'     => $meta[ $lang ] ?? '',
                             'post_id' => $post->ID
                         ];
                     }
                     return $out;
                 },
-            ] );
+            ]);
         }
     }
 }
