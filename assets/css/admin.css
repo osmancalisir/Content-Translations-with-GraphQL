@@ -1,0 +1,27 @@
+.multitab-translations .translations-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    overflow-x: auto;
+}
+
+.multitab-translations .tab-button {
+    padding: 8px 15px;
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 13px;
+    opacity: 0.8;
+}
+
+.multitab-translations .tab-button.active {
+    background: #2271b1;
+    color: #fff;
+    border-color: #2271b1;
+    opacity: 1;
+}
+
+.translations-editor .wp-editor-wrap {
+    margin-bottom: 10px;
+}
